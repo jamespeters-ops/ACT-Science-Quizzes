@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACT Science Practice</title>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #1a6b3c;
+    --accent-light: #e8f5ee;
+    --danger: #c0392b;
+    --danger-light: #fdf0ef;
+    --neutral: #f4f1ec;
+    --border: #d8d3ca;
+    --text: #1c1a17;
+    --muted: #6b6560;
+    --correct: #1a6b3c;
+    --incorrect: #c0392b;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #faf8f4; color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--text); color: #faf8f4;
+    padding: 0 2rem; display: flex; align-items: center;
+    justify-content: space-between; height: 56px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .quiz-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.5; }
+  .quiz-title-header { font-size: 0.95rem; font-weight: 700; }
+  #timer {
+    font-family: 'DM Mono', monospace; font-size: 1.1rem; font-weight: 500;
+    background: rgba(255,255,255,0.08); padding: 0.3rem 0.8rem;
+    border-radius: 6px; min-width: 70px; text-align: center; transition: background 0.3s;
+  }
+  #timer.warning { background: #c0392b; color: #fff; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+  .quiz-wrapper { max-width: 1060px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .quiz-intro { margin-bottom: 2rem; }
+  .quiz-intro h1 { font-family: 'Literata', serif; font-size: 1.6rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .quiz-intro p { color: var(--muted); font-size: 0.88rem; }
+
+  /* Score banner */
+  .score-banner {
+    display: none; background: var(--text); color: #faf8f4;
+    border-radius: 10px; padding: 1.5rem 1.75rem;
+    margin-bottom: 2rem; align-items: center; gap: 1.5rem;
+  }
+  .score-banner.visible { display: flex; }
+  .score-big { font-family: 'DM Mono', monospace; font-size: 2.8rem; font-weight: 500; line-height: 1; }
+  .score-details h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .score-details p { font-size: 0.85rem; opacity: 0.65; }
+
+  /* Passage section */
+  .passage-section { margin-bottom: 3rem; }
+  .passage-heading {
+    display: flex; align-items: baseline; gap: 1rem;
+    margin-bottom: 1.25rem; padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--text);
+  }
+  .passage-heading h2 { font-family: 'Literata', serif; font-size: 1.25rem; font-weight: 600; }
+  .passage-tag {
+    font-family: 'DM Mono', monospace; font-size: 0.65rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    background: var(--neutral); color: var(--muted);
+    padding: 0.2rem 0.6rem; border-radius: 4px; border: 1px solid var(--border);
+  }
+
+  .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
+  @media (max-width: 740px) { .main-grid { grid-template-columns: 1fr; } }
+
+  .passage-card {
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.75rem; position: sticky; top: 72px;
+    max-height: calc(100vh - 90px); overflow-y: auto;
+  }
+  .passage-card-label {
+    font-family: 'DM Mono', monospace; font-size: 0.62rem;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border);
+  }
+  .passage-text { font-family: 'Literata', serif; font-size: 0.93rem; line-height: 1.8; color: #2a2620; }
+  .passage-text p { margin-bottom: 1em; }
+  .passage-text h4 { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 700; margin: 1.2em 0 0.4em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text); }
+  .passage-text table { width: 100%; border-collapse: collapse; margin: 1em 0; font-family: 'DM Mono', monospace; font-size: 0.78rem; }
+  .passage-text th, .passage-text td { border: 1px solid var(--border); padding: 0.4rem 0.65rem; text-align: center; }
+  .passage-text th { background: var(--neutral); font-weight: 600; }
+  .figure-caption { font-family: 'DM Sans', sans-serif; font-size: 0.78rem; color: var(--muted); text-align: center; font-style: italic; margin-top: -0.5em; margin-bottom: 1em; }
+
+  /* Questions */
+  .question-block {
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.4rem; margin-bottom: 1.1rem;
+    transition: border-color 0.2s;
+  }
+  .question-block:focus-within { border-color: var(--accent); }
+  .q-number { font-family: 'DM Mono', monospace; font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.55rem; }
+  .q-text { font-size: 0.93rem; line-height: 1.55; margin-bottom: 0.9rem; font-weight: 500; }
+  .choices { display: flex; flex-direction: column; gap: 0.45rem; }
+  .choice-label {
+    display: flex; align-items: flex-start; gap: 0.65rem;
+    padding: 0.6rem 0.85rem; border: 1.5px solid var(--border);
+    border-radius: 7px; cursor: pointer; font-size: 0.88rem; line-height: 1.4;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .choice-label:hover { border-color: var(--accent); background: var(--accent-light); }
+  .choice-label input[type="radio"] { display: none; }
+  .choice-label.selected { border-color: var(--accent); background: var(--accent-light); }
+  .choice-label.correct { border-color: var(--correct); background: var(--accent-light); }
+  .choice-label.incorrect { border-color: var(--incorrect); background: var(--danger-light); }
+  .choice-letter { font-family: 'DM Mono', monospace; font-size: 0.73rem; font-weight: 500; color: var(--muted); min-width: 16px; margin-top: 1px; }
+  .result-badge {
+    font-family: 'DM Mono', monospace; font-size: 0.63rem; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.15rem 0.5rem; border-radius: 4px; margin-left: auto; white-space: nowrap;
+  }
+  .result-badge.correct { background: var(--correct); color: #fff; }
+  .result-badge.incorrect { background: var(--incorrect); color: #fff; }
+  .explanation {
+    margin-top: 0.9rem; padding: 0.8rem 1rem;
+    background: var(--neutral); border-radius: 7px;
+    font-size: 0.83rem; line-height: 1.6; color: #3a3530;
+    display: none; border-left: 3px solid var(--accent);
+  }
+  .explanation.visible { display: block; }
+
+  .submit-area { margin-top: 0.5rem; text-align: right; }
+  #submit-btn {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 8px; padding: 0.8rem 2rem;
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; letter-spacing: -0.01em; transition: background 0.2s, transform 0.1s;
+  }
+  #submit-btn:hover { background: #155730; transform: translateY(-1px); }
+  #submit-btn:active { transform: translateY(0); }
+  #submit-btn:disabled { background: #aaa; cursor: default; transform: none; }
+
+  #time-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(28,26,23,0.85); z-index: 999;
+    align-items: center; justify-content: center;
+  }
+  #time-overlay.visible { display: flex; }
+  .time-modal { background: #fff; border-radius: 14px; padding: 2.5rem; text-align: center; max-width: 340px; }
+  .time-modal h2 { font-family: 'Literata', serif; font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .time-modal p { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+  .time-modal button {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 8px; padding: 0.75rem 1.75rem;
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+  }
+
+  .sm-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace; font-size: 0.58rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    background: #fff8e1; color: #b07d00; border: 1px solid #f0d060;
+    padding: 0.1rem 0.45rem; border-radius: 4px; margin-left: 0.4rem;
+    vertical-align: middle; position: relative; top: -1px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     CONTENT ZONE — Edit quiz data here
+     ============================================================ -->
+<script>
+const QUIZ_TITLE    = "ACT Science Practice";
+const QUIZ_DATE     = "Passages I & II — 10 Questions";
+const TIMER_MINUTES = 12;
+
+// ── PASSAGE I ─────────────────────────────────────────────────
+const PASSAGE_1_LABEL    = "Passage I";
+const PASSAGE_1_SUBTITLE = "Research Summaries";
+const PASSAGE_1_CONTENT  = `
+<p>Two student researchers investigated whether listening to music while studying affects quiz performance on a vocabulary test.</p>
+
+<h4>Study 1</h4>
+<p>Researcher A recruited 24 high school juniors. She divided them into two groups of 12. Group 1 studied a list of 30 vocabulary words in silence for 20 minutes; Group 2 studied the same list while listening to instrumental music at a fixed volume. Both groups then took a 30-question multiple-choice quiz. Group 1 scored an average of 22.4/30; Group 2 scored an average of 19.1/30.</p>
+
+<h4>Study 2</h4>
+<p>Researcher B repeated the experiment using 60 students, randomly assigned to three groups of 20: Group A studied in silence, Group B studied with instrumental music, and Group C studied with music that included lyrics. Researcher B also controlled for prior vocabulary knowledge by administering a pre-test and only enrolling students who scored between 40–60% on it. Additionally, students were not told which condition was hypothesized to produce better results. Scores on the post-quiz were as follows:</p>
+
+<table>
+  <tr><th>Group</th><th>Condition</th><th>Avg. Score (out of 30)</th></tr>
+  <tr><td>A</td><td>Silence</td><td>23.1</td></tr>
+  <tr><td>B</td><td>Instrumental music</td><td>20.5</td></tr>
+  <tr><td>C</td><td>Music with lyrics</td><td>17.2</td></tr>
+</table>
+<p class="figure-caption">Table 1. Average quiz scores across three study conditions in Study 2.</p>
+
+<p>Researcher B concluded that the presence of lyrics was a significant factor, and that verbal content in background audio competes with verbal processing during studying.</p>
+`;
+
+// ── QUESTIONS 1–5 ─────────────────────────────────────────────
+// 🟡 = scientific method question
+const QUESTIONS_1 = [
+  {
+    text: "In Study 1, what was the independent variable?",
+    sm: true,
+    a: "The students' quiz scores",
+    b: "Whether or not music was playing during studying",
+    c: "The number of vocabulary words on the list",
+    d: "The amount of time each group studied",
+    answer: "B",
+    explanation: "The independent variable is the factor the researcher deliberately changes or controls. Researcher A changed whether students studied in silence or with music — everything else (study time, word list, quiz) was held constant. Quiz scores are the dependent variable."
+  },
+  {
+    text: "Study 1 lacked a feature that Study 2 included to strengthen the validity of the results. Which of the following best describes that improvement?",
+    sm: true,
+    a: "Study 2 used a longer vocabulary list",
+    b: "Study 2 blinded participants to the hypothesis being tested",
+    c: "Study 2 used a louder music volume",
+    d: "Study 2 increased the study time to 30 minutes",
+    answer: "B",
+    explanation: "If students know which condition is expected to perform better, their effort or attitude may be affected — a form of bias. Researcher B prevented this by not revealing the hypothesis. This is a key element of experimental control that Study 1 did not include."
+  },
+  {
+    text: "A classmate argues that Study 1 alone proves that music causes lower quiz scores. Which of the following is the strongest reason this conclusion is NOT fully supported by Study 1?",
+    sm: true,
+    a: "The sample size of 24 students is relatively small, and no pre-test was used to confirm the groups had equivalent prior knowledge",
+    b: "The vocabulary list was too short to draw meaningful conclusions",
+    c: "Group 2 studied for more minutes than Group 1",
+    d: "The quiz had too many questions to complete in time",
+    answer: "A",
+    explanation: "Without a pre-test, we cannot rule out that Group 2 simply knew fewer words to begin with. A small, unverified sample makes it impossible to attribute the score difference to music alone. Study 2 corrected this by screening for equivalent baseline knowledge."
+  },
+  {
+    text: "Based on the data in Table 1, which conclusion is best supported?",
+    sm: false,
+    a: "Instrumental music has no effect on quiz performance compared to silence",
+    b: "Music with lyrics has a greater negative effect on quiz performance than instrumental music",
+    c: "Silence always produces perfect quiz scores",
+    d: "All forms of music equally reduce quiz performance",
+    answer: "B",
+    explanation: "Group A (silence) averaged 23.1, Group B (instrumental) averaged 20.5, and Group C (lyrics) averaged 17.2. The drop from silence to lyrics (5.9 points) is larger than silence to instrumental (2.6 points), directly supporting the conclusion that lyrics have a greater negative effect."
+  },
+  {
+    text: "Researcher B's decision to only enroll students who scored between 40–60% on a pre-test was intended to:",
+    sm: true,
+    a: "Make the experiment easier to complete",
+    b: "Ensure all participants had similar prior knowledge, reducing a potential confounding variable",
+    c: "Increase the difficulty of the vocabulary quiz",
+    d: "Ensure that Group C would score lower than the other groups",
+    answer: "B",
+    explanation: "If students in one group already knew most of the vocabulary words before the experiment began, post-quiz differences might reflect prior knowledge rather than study conditions. Screening for equivalent baseline scores controls for this confounding variable — a hallmark of rigorous experimental design."
+  }
+];
+
+// ── PASSAGE II ────────────────────────────────────────────────
+const PASSAGE_2_LABEL    = "Passage II";
+const PASSAGE_2_SUBTITLE = "Data Representation";
+const PASSAGE_2_CONTENT  = `
+<p>A biologist investigated the rate of photosynthesis in an aquatic plant (<em>Elodea</em>) under varying light intensities and two levels of dissolved carbon dioxide (CO₂). Photosynthesis rate was measured as milliliters of oxygen (O₂) produced per hour (mL/hr). Each measurement was repeated three times and averaged. The experiment was conducted at a constant temperature of 22°C.</p>
+
+<table>
+  <tr>
+    <th>Light Intensity (lux)</th>
+    <th>Low CO₂ — O₂ Produced (mL/hr)</th>
+    <th>High CO₂ — O₂ Produced (mL/hr)</th>
+  </tr>
+  <tr><td>0</td><td>0.0</td><td>0.0</td></tr>
+  <tr><td>1,000</td><td>1.2</td><td>1.3</td></tr>
+  <tr><td>2,000</td><td>2.1</td><td>2.9</td></tr>
+  <tr><td>3,000</td><td>2.8</td><td>4.2</td></tr>
+  <tr><td>4,000</td><td>3.0</td><td>5.5</td></tr>
+  <tr><td>5,000</td><td>3.0</td><td>6.3</td></tr>
+  <tr><td>6,000</td><td>3.0</td><td>6.2</td></tr>
+</table>
+<p class="figure-caption">Table 2. O₂ production rates for <em>Elodea</em> at varying light intensities and CO₂ concentrations.</p>
+
+<p>When a plant cannot increase its photosynthesis rate despite increases in one factor (such as light), another factor is said to be <strong>limiting</strong> its rate. At very low light, no photosynthesis occurs regardless of CO₂ levels.</p>
+`;
+
+// ── QUESTIONS 6–10 ────────────────────────────────────────────
+const QUESTIONS_2 = [
+  {
+    text: "According to Table 2, at 3,000 lux, how much more O₂ per hour is produced at high CO₂ compared to low CO₂?",
+    sm: false,
+    a: "0.6 mL/hr",
+    b: "1.2 mL/hr",
+    c: "1.4 mL/hr",
+    d: "2.8 mL/hr",
+    answer: "C",
+    explanation: "At 3,000 lux, High CO₂ = 4.2 mL/hr and Low CO₂ = 2.8 mL/hr. The difference is 4.2 − 2.8 = 1.4 mL/hr. This is a straightforward table-reading question; be careful to subtract in the correct direction."
+  },
+  {
+    text: "Based on Table 2, at which light intensity does the photosynthesis rate under low CO₂ conditions appear to stop increasing?",
+    sm: false,
+    a: "2,000 lux",
+    b: "3,000 lux",
+    c: "4,000 lux",
+    d: "6,000 lux",
+    answer: "C",
+    explanation: "Under low CO₂, O₂ production increases from 0 to 3.0 mL/hr as light rises to 4,000 lux, then remains constant at 3.0 mL/hr at both 5,000 and 6,000 lux. This plateau at 4,000 lux indicates that light is no longer the limiting factor — CO₂ availability is."
+  },
+  {
+    text: "The biologist repeated each measurement three times and used the average result. This practice most likely:",
+    sm: true,
+    a: "Made the experiment take less time",
+    b: "Reduced the effect of random error and increased the reliability of the data",
+    c: "Ensured that temperature remained constant throughout",
+    d: "Eliminated the need for a control group",
+    answer: "B",
+    explanation: "Repeating trials and averaging results is a standard method for reducing the impact of random variation (random error). A single trial might be affected by a brief disturbance, measurement error, or natural variation in the plant's activity — averaging multiple trials produces a more reliable estimate of the true value."
+  },
+  {
+    text: "Which of the following would represent the best control condition for this experiment?",
+    sm: true,
+    a: "An Elodea plant at 3,000 lux with no CO₂ and no light",
+    b: "An Elodea plant kept in complete darkness (0 lux) at both CO₂ levels",
+    c: "A different species of aquatic plant tested at the same light levels",
+    d: "The same Elodea plant tested at a higher temperature",
+    answer: "B",
+    explanation: "A control establishes a baseline by removing the factor being tested. Since this experiment examines the effect of light on photosynthesis, the control should have no light (0 lux). The table shows 0.0 mL/hr at 0 lux for both CO₂ levels — confirming that without light, no photosynthesis occurs regardless of CO₂. This zero-light condition functions as the experimental control."
+  },
+  {
+    text: "A student concludes: \"Increasing light intensity always increases photosynthesis rate in Elodea, regardless of CO₂ level.\" Which of the following best explains why this conclusion is NOT supported by the data?",
+    sm: false,
+    a: "Photosynthesis rate at high CO₂ decreases between 5,000 and 6,000 lux",
+    b: "Under low CO₂, photosynthesis rate stops increasing above 4,000 lux, showing that another factor becomes limiting",
+    c: "The experiment was only conducted at one temperature",
+    d: "The Elodea plant produced the same amount of O₂ at 0 lux in both CO₂ conditions",
+    answer: "B",
+    explanation: "The student's claim is that light always drives increases in photosynthesis rate. However, under low CO₂ conditions, the rate plateaus at 3.0 mL/hr from 4,000 lux onward — additional light produces no further increase. This demonstrates that CO₂ becomes the limiting factor at higher light levels, directly contradicting the student's absolute claim. Choice A is a small and likely measurement variation, not a trend."
+  }
+];
+</script>
+<!-- END CONTENT ZONE -->
+
+<header>
+  <div>
+    <div class="quiz-label">ACT Science Practice</div>
+    <div class="quiz-title-header" id="header-title"></div>
+  </div>
+  <div id="timer">--:--</div>
+</header>
+
+<div class="quiz-wrapper">
+  <div class="quiz-intro">
+    <h1 id="page-title"></h1>
+    <p id="page-subtitle"></p>
+  </div>
+
+  <div id="score-banner" class="score-banner">
+    <div class="score-big" id="score-fraction"></div>
+    <div class="score-details">
+      <h3 id="score-label"></h3>
+      <p id="score-sub"></p>
+    </div>
+  </div>
+
+  <div id="quiz-body"></div>
+</div>
+
+<div id="time-overlay">
+  <div class="time-modal">
+    <h2>Time's Up!</h2>
+    <p>Your answers have been submitted automatically.</p>
+    <button onclick="dismissOverlay()">See Results</button>
+  </div>
+</div>
+
+<script>
+document.getElementById('header-title').textContent = QUIZ_TITLE;
+document.getElementById('page-title').textContent = QUIZ_TITLE;
+document.getElementById('page-subtitle').textContent = `${QUIZ_DATE} · ${TIMER_MINUTES} minutes`;
+
+const allSections = [
+  { label: PASSAGE_1_LABEL, subtitle: PASSAGE_1_SUBTITLE, content: PASSAGE_1_CONTENT, questions: QUESTIONS_1 },
+  { label: PASSAGE_2_LABEL, subtitle: PASSAGE_2_SUBTITLE, content: PASSAGE_2_CONTENT, questions: QUESTIONS_2 }
+];
+
+const letters = ['A','B','C','D'];
+const body = document.getElementById('quiz-body');
+let globalQIndex = 0;
+const userAnswers = {};
+
+allSections.forEach((section, si) => {
+  const sec = document.createElement('div');
+  sec.className = 'passage-section';
+
+  const heading = document.createElement('div');
+  heading.className = 'passage-heading';
+  heading.innerHTML = `<h2>${section.label}</h2><span class="passage-tag">${section.subtitle}</span>`;
+  sec.appendChild(heading);
+
+  const grid = document.createElement('div');
+  grid.className = 'main-grid';
+
+  // Passage card
+  const passageCard = document.createElement('div');
+  passageCard.className = 'passage-card';
+  passageCard.innerHTML = `<div class="passage-card-label">Passage</div><div class="passage-text">${section.content}</div>`;
+  grid.appendChild(passageCard);
+
+  // Questions column
+  const qCol = document.createElement('div');
+  section.questions.forEach((q, qi) => {
+    const absIdx = globalQIndex;
+    globalQIndex++;
+
+    const block = document.createElement('div');
+    block.className = 'question-block';
+    block.id = `q${absIdx}`;
+
+    let choicesHTML = '';
+    ['a','b','c','d'].forEach((l, li) => {
+      choicesHTML += `
+        <label class="choice-label" id="q${absIdx}-${letters[li]}" onclick="selectChoice(${absIdx},'${letters[li]}')">
+          <input type="radio" name="q${absIdx}" value="${letters[li]}">
+          <span class="choice-letter">${letters[li]}.</span>
+          <span>${q[l]}</span>
+        </label>`;
+    });
+
+    const smTag = q.sm ? `<span class="sm-tag">Sci. Method</span>` : '';
+
+    block.innerHTML = `
+      <div class="q-number">Question ${absIdx + 1} of 10 ${smTag}</div>
+      <div class="q-text">${q.text}</div>
+      <div class="choices">${choicesHTML}</div>
+      <div class="explanation" id="exp${absIdx}">${q.explanation}</div>
+    `;
+    qCol.appendChild(block);
+  });
+
+  grid.appendChild(qCol);
+  sec.appendChild(grid);
+  body.appendChild(sec);
+});
+
+// Submit button after everything
+const submitArea = document.createElement('div');
+submitArea.className = 'submit-area';
+submitArea.style.marginTop = '1rem';
+submitArea.innerHTML = `<button id="submit-btn" onclick="submitQuiz()">Submit Answers</button>`;
+body.appendChild(submitArea);
+
+function selectChoice(qi, letter) {
+  if (document.getElementById('submit-btn').disabled) return;
+  userAnswers[qi] = letter;
+  letters.forEach(l => {
+    document.getElementById(`q${qi}-${l}`).classList.toggle('selected', l === letter);
+  });
+}
+
+// Collect all questions in order
+const allQuestions = allSections.flatMap(s => s.questions);
+
+function submitQuiz(auto = false) {
+  clearInterval(timerInterval);
+  document.getElementById('submit-btn').disabled = true;
+
+  let correct = 0;
+  allQuestions.forEach((q, qi) => {
+    const chosen = userAnswers[qi];
+    const right = q.answer;
+    letters.forEach(l => {
+      const label = document.getElementById(`q${qi}-${l}`);
+      label.style.cursor = 'default';
+      label.style.pointerEvents = 'none';
+    });
+    if (chosen === right) {
+      correct++;
+      const el = document.getElementById(`q${qi}-${right}`);
+      el.classList.remove('selected'); el.classList.add('correct');
+      el.innerHTML += `<span class="result-badge correct">Correct</span>`;
+    } else {
+      if (chosen) {
+        const el = document.getElementById(`q${qi}-${chosen}`);
+        el.classList.remove('selected'); el.classList.add('incorrect');
+        el.innerHTML += `<span class="result-badge incorrect">Your Answer</span>`;
+      }
+      const el = document.getElementById(`q${qi}-${right}`);
+      el.classList.add('correct');
+      el.innerHTML += `<span class="result-badge correct">Correct</span>`;
+    }
+    document.getElementById(`exp${qi}`).classList.add('visible');
+  });
+
+  const pct = Math.round((correct / allQuestions.length) * 100);
+  document.getElementById('score-fraction').textContent = `${correct}/10`;
+  document.getElementById('score-label').textContent =
+    pct >= 80 ? 'Strong work!' :
+    pct >= 60 ? 'Good effort — review the explanations below.' :
+    'Keep practicing — read each explanation carefully.';
+  document.getElementById('score-sub').textContent = `${pct}% correct${auto ? ' · time expired' : ''}`;
+  document.getElementById('score-banner').classList.add('visible');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Timer
+let timeLeft = TIMER_MINUTES * 60;
+const timerEl = document.getElementById('timer');
+function fmt(s) { return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; }
+timerEl.textContent = fmt(timeLeft);
+const timerInterval = setInterval(() => {
+  timeLeft--;
+  timerEl.textContent = fmt(timeLeft);
+  if (timeLeft <= 60) timerEl.classList.add('warning');
+  if (timeLeft <= 0) { clearInterval(timerInterval); document.getElementById('time-overlay').classList.add('visible'); submitQuiz(true); }
+}, 1000);
+
+function dismissOverlay() { document.getElementById('time-overlay').classList.remove('visible'); }
+</script>
+</body>
+</html>
